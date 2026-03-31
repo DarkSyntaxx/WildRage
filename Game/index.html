@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            const el = document.createElement('div');
+            el.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(200,0,0,0.8); color:white; font-size:20px; z-index:9999; padding:20px; white-space:pre-wrap;';
+            el.innerText = 'CRITICAL ERROR:\\n' + message + '\\n' + (error ? error.stack : '') + '\\nAt: ' + source + ':' + lineno;
+            if(!document.getElementById('debug-error-overlay')) {
+                el.id = 'debug-error-overlay';
+                document.body ? document.body.appendChild(el) : document.documentElement.appendChild(el);
+            }
+        };
+        window.addEventListener('unhandledrejection', function(evt) {
+            window.onerror(evt.reason.message, '', 0, 0, evt.reason);
+        });
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WildRage — 2D Fighting Game Engine</title>
+    <meta name="description" content="A premium browser-based 2D fighting game with cinematic effects, competitive modes, and character progression.">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+<body>
+    
+    <div id="ui-layer" class="active">
+        
+        <!-- MAIN MENU -->
+        <div id="main-menu" class="screen active">
+            <div id="profile-stats">
+                <div id="prof-rank" style="font-family:'Orbitron'; font-weight:700; font-size:16px; color:var(--accent); letter-spacing:2px;">RANK: WHITE BELT</div>
+                <div id="prof-record" style="font-size:13px; margin-top:4px; color:rgba(255,255,255,0.6);">W/L: 0 - 0</div>
+                <div id="prof-coins" style="font-size:14px; margin-top:6px; color:#f1c40f; font-family:'Orbitron'; font-weight:bold;">🪙 100</div>
+            </div>
+            
+            <h1 class="game-title" style="margin-bottom:30px; font-size:64px;">WILDRAGE</h1>
+            
+            <button onclick="nav('mode-select')">⚔️ LOCAL PLAY</button>
+            <button onclick="nav('online-lobby')">🌐 ONLINE PLAY</button>
+            <button onclick="startTrainingMode()">🥊 TRAINING MODE</button>
+            <button onclick="nav('store-screen')">🛒 STORE</button>
+            <button onclick="nav('leaderboard-screen')">🏆 LEADERBOARDS</button>
+            <button onclick="nav('settings')">⚙️ SETTINGS</button>
+        </div>
+
+
+        
+        <!-- ONLINE LOBBY -->
+        <div id="online-lobby" class="screen">
+            <h1 class="game-title" style="font-size:56px;">ONLINE DOJO</h1>
+            <div class="online-panels">
+                <div class="online-panel">
+                    <h2 style="font-family:'Orbitron'; color:var(--primary); margin:0 0 5px;">HOST GAME</h2>
+                    <p style="font-size:13px; color:rgba(255,255,255,0.4); margin-bottom:20px;">Generate a secure P2P code.</p>
+                    <button onclick="window.networkHost()" id="btn-host-game" style="min-width:200px;">CREATE LOBBY</button>
+                    <div id="host-code-display" style="font-family:'Orbitron'; color:white; font-size:36px; font-weight:900; margin-top:20px; letter-spacing:6px;"></div>
+                </div>
+                <div class="online-panel">
+                    <h2 style="font-family:'Orbitron'; color:var(--secondary); margin:0 0 5px;">JOIN GAME</h2>
+                    <p style="font-size:13px; color:rgba(255,255,255,0.4); margin-bottom:20px;">Input an active Session Code.</p>
+                    <input type="text" id="join-code-input" placeholder="CODE" maxlength="4">
+                    <button onclick="window.networkJoin()" id="btn-join-game" style="min-width:200px;">CONNECT</button>
+                </div>
+            </div>
+            <div id="online-status" style="font-family:'Orbitron'; color:var(--accent); font-size:14px; margin-bottom:15px; letter-spacing:2px; height:20px;"></div>
+            <button onclick="nav('main-menu')">← BACK</button>
+        </div>
+
+        <!-- MODE SELECT -->
+        <div id="mode-select" class="screen">
+            <h1 class="game-title" style="font-size:56px;">LOCAL PLAY</h1>
+            <button onclick="setMode('pvp')">👥 PLAYER VS PLAYER</button>
+            <button onclick="setMode('pve')">🤖 PLAYER VS CPU</button>
+            <button onclick="nav('main-menu')">← BACK</button>
+        </div>
+
+        <!-- STAGE SELECT -->
+        <div id="stage-select" class="screen">
+            <h1 class="game-title" style="font-size:56px;">SELECT STAGE</h1>
+            <div class="roster" id="stage-roster"></div>
+            <button id="btn-stage-back" onclick="nav('mode-select')">← BACK</button>
+        </div>
+
+        <!-- CHARACTER SELECT -->
+        <div id="char-select" class="screen">
+            <h1 class="game-title" style="font-size:52px;">SELECT FIGHTER</h1>
+            <h2 id="select-prompt" class="select-prompt-text" style="color:var(--primary); margin-bottom:20px;">PLAYER 1 SELECT</h2>
+            <div class="roster" id="roster"></div>
+            
+            <div id="skin-select-container" style="display:none; margin-top:20px;">
+                <h3 style="color:white; font-family:'Orbitron'; font-size:14px; margin-bottom:10px;">SELECT SKIN:</h3>
+                <div id="skin-options" style="display:flex; justify-content:center; gap:10px;"></div>
+            </div>
+
+            <button id="btn-fight" style="display:none; margin-top:20px;" onclick="startGame()">⚔️ FIGHT!</button>
+            <button id="btn-back" onclick="nav('stage-select')">← BACK</button>
+        </div>
+
+        <!-- STORE SCREEN -->
+        <div id="store-screen" class="screen">
+            <h1 class="game-title" style="font-size:56px;">DOJO STORE</h1>
+            <div style="font-size:24px; color:#f1c40f; font-family:'Orbitron'; font-weight:bold; margin-bottom:20px;" id="store-coin-display">🪙 100</div>
+            
+            <div style="display:flex; gap:20px; margin-bottom:20px;">
+                <button onclick="renderStore('characters')" id="tab-chars" class="store-tab active">CHARACTERS</button>
+                <button onclick="renderStore('skins')" id="tab-skins" class="store-tab">SKINS</button>
+            </div>
+            
+            <div id="store-items" class="roster" style="max-height: 400px; overflow-y: auto;"></div>
+            
+            <button onclick="nav('main-menu')" style="margin-top:20px;">← BACK</button>
+        </div>
+
+
+
+        <!-- LEADERBOARDS SCREEN -->
+        <div id="leaderboard-screen" class="screen">
+            <h1 class="game-title" style="font-size:56px;">GLOBAL DOJO</h1>
+            
+            <div id="leaderboard-list" style="width:80%; max-width:600px; margin:0 auto; background:rgba(0,0,0,0.6); border:2px solid var(--primary); border-radius:10px; padding:20px; text-align:left; font-family:'Orbitron';">
+                <!-- Populated dynamically -->
+            </div>
+            
+            <button onclick="nav('main-menu')" style="margin-top:30px;">← BACK</button>
+        </div>
+
+        <!-- SETTINGS -->
+        <div id="settings" class="screen">
+            <h1 class="game-title" style="font-size:56px;">SETTINGS</h1>
+            <div style="color:white; font-size:18px; margin-bottom:50px; font-family:'Rajdhani'; display:flex; align-items:center; gap:15px;">
+                <label style="letter-spacing:2px;">MASTER VOLUME</label>
+                <input type="range" id="vol-slider" min="0" max="1" step="0.05" value="0.5" onchange="window.audio.setVolume(this.value)" style="width:200px; accent-color:var(--accent);">
+            </div>
+            <button onclick="nav('main-menu')">← BACK</button>
+        </div>
+
+    </div>
+
+    <!-- ACTIVE GAME CONTAINER -->
+    <div id="game-container" style="display:none; opacity:0; transition:opacity 0.8s;">
+        
+        <div id="hud">
+            <div style="width:40%; display:flex; flex-direction:column;">
+                <div style="font-family:'Orbitron'; font-size:11px; font-weight:700; color:rgba(255,255,255,0.5); margin-bottom:4px; letter-spacing:2px; display:flex; align-items:center; gap:6px;">
+                    <span id="p1-profile-tag">PLAYER 1</span>
+                    <span id="p1-level-badge" style="background:var(--accent); color:#000; font-size:9px; padding:1px 5px; border-radius:3px; display:none;">LVL 1</span>
+                </div>
+                <div id="player1-health-container" class="health-bar-container" style="width:100%;">
+                    <div id="player1-health" class="health-bar"></div>
+                </div>
+                <div id="player1-rage-container" class="rage-bar-container" style="width:100%;">
+                    <div id="player1-rage" class="rage-bar"></div>
+                </div>
+                <div class="win-tracker">
+                    <span class="win-dot" id="p1-win-1"></span>
+                    <span class="win-dot" id="p1-win-2"></span>
+                </div>
+            </div>
+            
+            <div id="timer">∞</div>
+            
+            <div style="width:40%; display:flex; flex-direction:column; align-items:flex-end;">
+                <div style="font-family:'Orbitron'; font-size:11px; font-weight:700; color:rgba(255,255,255,0.5); margin-bottom:4px; letter-spacing:2px; text-align:right; display:flex; align-items:center; gap:6px; flex-direction:row-reverse;">
+                    <span id="p2-profile-tag">PLAYER 2</span>
+                    <span id="p2-level-badge" style="background:#1e90ff; color:#fff; font-size:9px; padding:1px 5px; border-radius:3px; display:none;">LVL 1</span>
+                </div>
+                <div id="player2-health-container" class="health-bar-container" style="width:100%;">
+                    <div id="player2-health" class="health-bar"></div>
+                </div>
+                <div id="player2-rage-container" class="rage-bar-container" style="width:100%;">
+                    <div id="player2-rage" class="rage-bar"></div>
+                </div>
+                <div class="win-tracker" style="justify-content:flex-end;">
+                    <span class="win-dot" id="p2-win-1"></span>
+                    <span class="win-dot" id="p2-win-2"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mode-specific HUD info (survival wave, time attack score) -->
+        <div id="mode-hud" style="position:absolute; top:90px; left:50%; transform:translateX(-50%); font-family:'Orbitron'; font-size:14px; color:var(--accent); letter-spacing:2px; text-align:center; z-index:50; display:none;"></div>
+        
+        <div id="overlay-text"></div>
+        <div id="p1-combo" class="combo-text" style="left:3%;"></div>
+        <div id="p2-combo" class="combo-text" style="right:3%;"></div>
+        
+        <!-- Emote bubbles -->
+        <div id="p1-emote" class="emote-bubble" style="left:8%;"></div>
+        <div id="p2-emote" class="emote-bubble" style="right:8%;"></div>
+
+        <!-- Screen flash overlay -->
+        <div id="screen-flash" style="position:absolute; inset:0; pointer-events:none; z-index:300; opacity:0; border-radius:12px;"></div>
+
+        <canvas id="gameCanvas"></canvas>
+        
+        <!-- DIALOGUE OVERLAY -->
+        <div id="dialogue-overlay" style="display:none; position:absolute; bottom:5%; left:5%; right:5%; height:150px; background:rgba(0,0,0,0.85); border:2px solid var(--primary); border-radius:10px; z-index:100; padding:20px; box-sizing:border-box; box-shadow:0 0 20px rgba(0,0,0,0.8); backdrop-filter:blur(5px); font-family:'Rajdhani', sans-serif;">
+            <div style="display:flex; height:100%; gap:20px;">
+                <div id="dialogue-portrait" style="flex:0 0 100px; height:100px; border:1px solid rgba(255,255,255,0.2); background:#111; display:flex; justify-content:center; align-items:center;"></div>
+                <div style="flex:1;">
+                    <div id="dialogue-name" style="font-family:'Orbitron'; font-weight:bold; font-size:24px; color:var(--primary); letter-spacing:2px; margin-bottom:10px;">NAME</div>
+                    <div id="dialogue-text" style="color:white; font-size:20px; line-height:1.4;">Dialogue text goes here...</div>
+                </div>
+            </div>
+            <div id="dialogue-continue" style="position:absolute; bottom:15px; right:20px; color:rgba(255,255,255,0.5); font-weight:bold; animation:pulse 1s infinite alternate; cursor:pointer;" onclick="advanceDialogue()">CLICK TO CONTINUE ▼</div>
+        </div>
+        
+        <!-- ACHIEVEMENT TOAST -->
+        <div id="achievement-toast" style="display:none; position:absolute; top:-100px; right:20px; width:300px; background:rgba(0,0,0,0.9); border:2px solid #f1c40f; border-radius:8px; padding:15px; z-index:200; box-shadow:0 0 15px rgba(241,196,15,0.5); font-family:'Rajdhani'; transition: top 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+            <div style="display:flex; align-items:center; gap:15px;">
+                <div style="font-size:30px;">🏆</div>
+                <div>
+                    <div style="color:#f1c40f; font-family:'Orbitron'; font-weight:bold; font-size:14px; margin-bottom:5px;">ACHIEVEMENT UNLOCKED</div>
+                    <div id="achievement-text" style="color:white; font-size:18px;">First Win</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- LEVEL UP TOAST -->
+        <div id="levelup-toast" style="display:none; position:absolute; top:-100px; left:20px; width:260px; background:rgba(0,0,0,0.9); border:2px solid var(--accent); border-radius:8px; padding:15px; z-index:200; box-shadow:0 0 15px rgba(0,255,204,0.4); font-family:'Rajdhani'; transition: top 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+            <div style="display:flex; align-items:center; gap:15px;">
+                <div style="font-size:30px;">⬆️</div>
+                <div>
+                    <div style="color:var(--accent); font-family:'Orbitron'; font-weight:bold; font-size:14px; margin-bottom:5px;">LEVEL UP!</div>
+                    <div id="levelup-text" style="color:white; font-size:18px;">Ninja → LVL 2</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TRAINING TOGGLE OVERLAY -->
+        <div id="training-overlay" style="display:none; position:absolute; top:20px; left:50%; transform:translateX(-50%); z-index:90;">
+            <button id="btn-toggle-ai" onclick="toggleTrainingAI()" style="padding:10px 20px; font-size:14px;">TOGGLE DUMMY AI: OFF</button>
+        </div>
+
+
+
+        <script>
+            window.nav = function(screenId) {
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                document.getElementById(screenId).classList.add('active');
+            };
+        </script>
+    </div>
+    
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -169,7 +169,6 @@ window.showAchievement = (id, text) => {
 
 window.startTrainingMode = () => {
     gameMode = 'training';
-    storyModeActive = false;
     window.nav('char-select');
 };
 
@@ -391,7 +390,7 @@ function buildRoster() {
     DOM.btnFight.style.display = 'none';
     DOM.skinContainer.style.display = 'none';
     p1SelectionId = null; 
-    if (!storyModeActive) p2SelectionId = null;
+    p2SelectionId = null;
     p1Skin = 'default'; p2Skin = 'default';
     DOM.roster.innerHTML = '';
     
@@ -788,47 +787,7 @@ function showOverlay(text, duration = null) {
     if (duration) setTimeout(() => { DOM.overlay.style.display = 'none'; }, duration);
 }
 
-function playDialogueCutscene(dialogue, callback) {
-    DOM.dialogueOverlay.style.display = 'flex';
-    DOM.dialoguePortrait.src = `./assets/portraits/${dialogue.charId}.png`;
-    DOM.dialogueName.innerText = dialogue.name;
-    DOM.dialogueText.innerText = dialogue.dialogue;
 
-    const advanceDialogue = () => {
-        DOM.dialogueOverlay.removeEventListener('click', advanceDialogue);
-        DOM.dialogueOverlay.style.display = 'none';
-        callback();
-    };
-    DOM.dialogueOverlay.addEventListener('click', advanceDialogue);
-}
-
-function buildStoryUI() {
-    DOM.storyNodes.innerHTML = '';
-    STORY_OPPONENTS.forEach((opponent, index) => {
-        const node = document.createElement('div');
-        node.className = `story-node ${DataManager.data.storyProgress >= index ? 'unlocked' : 'locked'} ${DataManager.data.storyProgress === index ? 'active' : ''}`;
-        node.innerHTML = `
-            <img src="./assets/portraits/${opponent.charId}.png" alt="${opponent.name}" class="story-portrait">
-            <div class="story-name">${opponent.name}</div>
-            <div class="story-difficulty">${opponent.diff.toUpperCase()}</div>
-        `;
-        node.onclick = () => {
-            if (DataManager.data.storyProgress < index) {
-                alert("This opponent is locked! Defeat the previous one first.");
-                return;
-            }
-            currentStoryOpponentIndex = index;
-            storyModeActive = true;
-            gameMode = 'pve'; // Story mode is always PVE
-            p2SelectionId = opponent.charId;
-            selectedStageId = opponent.stage;
-            currentStoryDialogue = opponent;
-            window.nav('char-select'); // Player 1 selects their character
-        };
-        DOM.storyNodes.appendChild(node);
-    });
-    DOM.storyProgressContainer.style.width = `${(DataManager.data.storyProgress / (STORY_OPPONENTS.length - 1)) * 100}%`;
-}
 
 function startRoundSequence() {
     roundActive = false; timeScaleTarget = 1; timeScale = 1; zoomTarget = 1;
@@ -938,8 +897,6 @@ function handleCombatHit(attacker, defender, healthBarDOMKey, attackerComboSys) 
 
 function exitMatch() {
     DOM.overlay.style.display = 'none';
-    storyModeActive = false;
-    currentStoryOpponentIndex = 0;
     survivalActive = false; survivalWave = 0;
     timeAttackActive = false; timeAttackP1Score = 0; timeAttackP2Score = 0;
     if (modeHud) { modeHud.innerText = ''; modeHud.style.display = 'none'; }
@@ -979,12 +936,12 @@ function endRound(winnerName) {
             if (player1.health >= 100) window.showAchievement('perfect', 'Perfect Win');
             showOverlay('PLAYER 1 WINS!');
             if (gameMode !== 'online-client') {
-                matchResultObj = DataManager.addMatchResult(true, storyModeActive, player1.health >= 100, p1ComboSys.hits, p1SelectionId);
+                matchResultObj = DataManager.addMatchResult(true, false, player1.health >= 100, p1ComboSys.hits, p1SelectionId);
             }
         } else {
             showOverlay('PLAYER 2 WINS!');
             if (gameMode !== 'online-client') {
-                matchResultObj = DataManager.addMatchResult(false, storyModeActive, player2.health >= 100, p2ComboSys.hits, p1SelectionId);
+                matchResultObj = DataManager.addMatchResult(false, false, player2.health >= 100, p2ComboSys.hits, p1SelectionId);
             }
         }
 
